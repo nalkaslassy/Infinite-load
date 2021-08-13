@@ -1,40 +1,77 @@
+const imageContainer = document.getElementById('image-container');
+const loader = document.getElementById('loader');
 
-// <div class="quote-container" id="quote-container"> We are grabbing that ID from the html page
-const quoteContainer = document.getElementById('quote-container');
-const quoteText = document.getElementById('quote');
-const authorText = document.getElementById('author');
-const twitterBtn = document.getElementById('twitter');
-const newQuoteBtn = document.getElementById('new-quote');
-// Get Quotes From API
-let apiQuotes = [];
-// Show new Quote
-function newQuote() {
-// Pick a random quote from apiQuotes Array
-  const quote = apiQuotes[Math.floor(Math.random() * apiQuotes.length)];  
-// Check if Author field is blank and replace it with 'Unknown'
-if (!quote.author){
-    authorText.textContent = 'Unkown'
-}
-else {
-    authorText.textContent = quote.author;
-}
+let ready = false;
+let imagesLoaded = 0;
+let totalImages = 0;
+let photosArray = [];
 
+// Unsplash API
+const count = 30;
+const apiKey = 'KA5xQ-FmlV6RuqktGHyWY9vAbU9OzoXC8DljcxHxOHk';
+const apiUrl = `https://api.unsplash.com/photos/random?client_id=${apiKey}&count=${count}`;
 
-
-quoteText.textContent = quote.text;
+// Check if all images were loaded
+function imageLoaded() {
+  imagesLoaded++;
+  if (imagesLoaded === totalImages) {
+    ready = true;
+    loader.hidden = true;
+  }
 }
 
-
-async function getQuotes() {
-    const apiUrl = 'https://type.fit/api/quotes';
-    try {
-const response = await fetch(apiUrl);
-apiQuotes = await response.json();
-newQuote();
-    } catch (error){
-        //Error Handling                                                                                    
-    }
+// Helper Function to Set Attributes on DOM Elements
+function setAttributes(element, attributes) {
+  for (const key in attributes) {
+    element.setAttribute(key, attributes[key]);
+  }
 }
-//  On Load
 
-getQuotes();
+// Create Elements For Links & Photos, Add to DOM
+function displayPhotos() {
+  imagesLoaded = 0;
+  totalImages = photosArray.length;
+  // Run function for each object in photosArray
+  photosArray.forEach((photo) => {
+    // Create <a> to link to full photo
+    const item = document.createElement('a');
+    setAttributes(item, {
+      href: photo.links.html,
+      target: '_blank',
+    });
+    // Create <img> for photo
+    const img = document.createElement('img');
+    setAttributes(img, {
+      src: photo.urls.regular,
+      alt: photo.alt_description,
+      title: photo.alt_description,
+    });
+    // Event Listener, check when each is finished loading
+    img.addEventListener('load', imageLoaded);
+    // Put <img> inside <a>, then put both inside imageContainer Element
+    item.appendChild(img);
+    imageContainer.appendChild(item);
+  });
+}
+
+// Get photos from Unsplash API
+async function getPhotos() {
+  try {
+    const response = await fetch(apiUrl);
+    photosArray = await response.json();
+    displayPhotos();
+  } catch (error) {
+    // Catch Error Here
+  }
+}
+
+// Check to see if scrolling near bottom of page, Load More Photos
+window.addEventListener('scroll', () => {
+  if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 1000 && ready) {
+    ready = false;
+    getPhotos();
+  }
+});
+
+// On Load
+getPhotos();
